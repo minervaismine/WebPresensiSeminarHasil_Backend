@@ -1984,17 +1984,11 @@ def activate_qr():
             "message": "QR Code belum dibuat"
         }), 404
     
-    print("QR DITEMUKAN:", qr)
-
-    print("NOW BACKEND :", now)
-    print("EXPIRED BACKEND :", expired)
-    
     now = datetime.now(timezone.utc)
     expired = now + timedelta(minutes=10)
 
-    print("NOW:", now)
-    print("EXPIRED:", expired)
-
+    print("NOW BACKEND :", now)
+    print("EXPIRED BACKEND :", expired)
     cursor.execute("""
         UPDATE qr_codes
         SET
