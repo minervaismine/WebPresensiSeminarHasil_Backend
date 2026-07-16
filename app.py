@@ -118,6 +118,18 @@ def role_required(*roles):
         return decorated
     return wrapper
 
+@app.route("/debug-time")
+def debug_time():
+    from datetime import datetime, timezone
+    import time
+
+    return jsonify({
+        "python_now": str(datetime.now()),
+        "python_utc": str(datetime.now(timezone.utc)),
+        "python_utcnow": str(datetime.utcnow()),
+        "time_time": time.time()
+    })
+
 #Menampilkan detail riwayat verifikasi, fitur search, fitur sort, fitur filter, card dan progress bar halaman Riwayat Verifikasi Lihat Detail - Verifikator
 @app.route("/riwayat-verifikasi/<int:id_seminar>")
 @login_required
