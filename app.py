@@ -1767,7 +1767,7 @@ def qr_status(id_seminar):
 
     qr = cursor.fetchone()
 
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
 
     if qr:
         if qr["status_qr"] == "active":
@@ -1985,6 +1985,9 @@ def activate_qr():
         }), 404
     
     print("QR DITEMUKAN:", qr)
+
+    print("NOW BACKEND :", now)
+    print("EXPIRED BACKEND :", expired)
     
     now = datetime.now(timezone.utc)
     expired = now + timedelta(minutes=10)
