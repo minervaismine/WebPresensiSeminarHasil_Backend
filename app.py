@@ -2001,12 +2001,9 @@ def activate_qr():
         WHERE id_seminar = %s           
     """, (now, expired, id_seminar))
 
-    print("UPDATE BERHASIL")
+    print("ROWCOUNT:", cursor.rowcount)
 
     conn.commit()
-
-    print("COMMIT BERHASIL")
-
     cursor.close()
     conn.close()
 
