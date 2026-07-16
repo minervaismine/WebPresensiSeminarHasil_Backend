@@ -1774,7 +1774,14 @@ def qr_status(id_seminar):
 
     qr = cursor.fetchone()
 
+    print("expired_at :", qr["expired_at"])
+    print("type       :", type(qr["expired_at"]))
+    print("tzinfo     :", qr["expired_at"].tzinfo if qr["expired_at"] else None)
+
     now = datetime.utcnow()
+
+    print("now        :", now)
+    print("now tzinfo :", now.tzinfo)
 
     if qr:
         if qr["status_qr"] == "active":
