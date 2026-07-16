@@ -1,9 +1,9 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify
 from flask_cors import CORS
 from config import get_db_connection
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from math import ceil, radians, sin, cos, sqrt, atan2
 import jwt
 import locale
@@ -1767,7 +1767,7 @@ def qr_status(id_seminar):
 
     qr = cursor.fetchone()
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
 
     if qr:
         if qr["status_qr"] == "active":
@@ -1986,7 +1986,7 @@ def activate_qr():
     
     print("QR DITEMUKAN:", qr)
     
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     expired = now + timedelta(minutes=10)
 
     print("NOW:", now)
