@@ -1951,6 +1951,14 @@ def generate_qr():
 @login_required
 @role_required("mahasiswa")
 def activate_qr():
+    print("=== ACTIVATE QR DIPANGGIL ===")
+
+    data = request.get_json()
+    print("DATA DITERIMA:", data)
+
+    id_seminar = data.get("id_seminar")
+    print("ID SEMINAR:", id_seminar)
+
     data = request.get_json()
 
     id_seminar = data.get("id_seminar")
