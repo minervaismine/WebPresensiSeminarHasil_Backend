@@ -2010,6 +2010,7 @@ def activate_qr():
     return jsonify ({
         "success": True,
         "message": "QR Code berhasil diaktifkan",
+        "status_qr": "active",
         "expired_at": expired.isoformat()
     })
 
