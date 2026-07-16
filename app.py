@@ -1786,51 +1786,51 @@ def qr_status(id_seminar):
 
     qr = cursor.fetchone()
 
-    print("expired_at :", qr["expired_at"])
-    print("type       :", type(qr["expired_at"]))
-    print("tzinfo     :", qr["expired_at"].tzinfo if qr["expired_at"] else None)
-
-    now = datetime.utcnow()
-
-    print("now        :", now)
-    print("now tzinfo :", now.tzinfo)
-
-    if qr:
-        if qr["status_qr"] == "active":
-            if qr["expired_at"] is None:
-                qr["status_qr"] = "inactive"
-            elif qr["expired_at"] <= now:
-                cursor.execute("""
-                    UPDATE qr_codes
-                    SET
-                        status_qr='inactive',
-                        activated_at=NULL,
-                        expired_at=NULL
-                    WHERE id_seminar=%s
-                """,(id_seminar,))
-
-                conn.commit()
-
-                qr["status_qr"] = "inactive"
-                qr["expired_at"] = None
-
+    if not qr:
         cursor.close()
         conn.close()
 
-    if not qr:
         return jsonify({
             "success": False,
             "message": "QR belum dibuat"
         }), 404
 
+    now = datetime.utcnow()
+
+    # DEBUG
+    print("DATABASE expired_at :", qr["expired_at"])
+    print("DATABASE type       :", type(qr["expired_at"]))
+    print("DATABASE tzinfo     :", qr["expired_at"].tzinfo if qr["expired_at"] else None)
+    print("NOW                :", now)
+    print("NOW tzinfo         :", now.tzinfo)
+
+    if qr["status_qr"] == "active":
+        if qr["expired_at"] is None:
+            qr["status_qr"] = "inactive"
+
+        elif qr["expired_at"] <= now:
+            cursor.execute("""
+                UPDATE qr_codes
+                SET
+                    status_qr='inactive',
+                    activated_at=NULL,
+                    expired_at=NULL
+                WHERE id_seminar=%s
+            """, (id_seminar,))
+
+            conn.commit()
+
+            qr["status_qr"] = "inactive"
+            qr["expired_at"] = None
+
+        cursor.close()
+        conn.close()
+
     return jsonify({
         "success": True,
         "qr_code": qr["qr_code"],
         "status_qr": qr["status_qr"],
-        "expired_at":
-            qr["expired_at"].isoformat()
-            if qr["expired_at"]
-            else None
+        "expired_at": qr["expired_at"].isoformat() if qr["expired_at"] else None
     }), 200
 
 #Menghubungkan data QR Code dengan data seminar
