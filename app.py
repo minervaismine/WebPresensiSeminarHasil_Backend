@@ -2027,6 +2027,7 @@ def activate_qr():
     print("ROWCOUNT:", cursor.rowcount)
 
     conn.commit()
+    print("SETELAH COMMIT:", cursor.fetchone())
     cursor.close()
     conn.close()
 
