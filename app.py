@@ -1746,6 +1746,13 @@ def tambah_seminar():
 
     return jsonify({"message": "Berhasil"})
 
+@app.route("/server-time")
+def server_time():
+    return jsonify({
+        "utc": datetime.now(timezone.utc).isoformat(),
+        "local": datetime.now().isoformat()
+    })
+
 #Mengecek status QR Code apakah aktif atau tidak
 @app.route("/qr-status/<int:id_seminar>", methods=["GET"])
 @login_required
