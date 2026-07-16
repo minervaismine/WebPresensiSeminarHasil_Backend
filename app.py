@@ -1984,8 +1984,13 @@ def activate_qr():
             "message": "QR Code belum dibuat"
         }), 404
     
+    print("QR DITEMUKAN:", qr)
+    
     now = datetime.now()
     expired = now + timedelta(minutes=10)
+
+    print("NOW:", now)
+    print("EXPIRED:", expired)
 
     cursor.execute("""
         UPDATE qr_codes
@@ -1994,12 +1999,13 @@ def activate_qr():
             activated_at = %s,
             expired_at = %s
         WHERE id_seminar = %s           
-    """, (
-        now,
-        expired,
-        id_seminar
-    ))
+    """, (now, expired, id_seminar))
+
+    print("UPDATE BERHASIL")
+
     conn.commit()
+
+    print("COMMIT BERHASIL")
 
     cursor.close()
     conn.close()
