@@ -1907,7 +1907,7 @@ def generate_qr():
             if (
                 existing_qr["status_qr"] == "active"
                 and existing_qr["expired_at"]
-                and existing_qr["expired_at"] > datetime.now()
+                and existing_qr["expired_at"] > datetime.now(timezone.utc)
             ):
                 cursor.close()
                 conn.close()
@@ -1977,16 +1977,7 @@ def generate_qr():
 @login_required
 @role_required("mahasiswa")
 def activate_qr():
-    print("=== ACTIVATE QR DIPANGGIL ===")
-
     data = request.get_json()
-    print("DATA DITERIMA:", data)
-
-    id_seminar = data.get("id_seminar")
-    print("ID SEMINAR:", id_seminar)
-
-    data = request.get_json()
-
     id_seminar = data.get("id_seminar")
 
     conn = get_db_connection()
@@ -1997,7 +1988,7 @@ def activate_qr():
         SELECT *
         FROM qr_codes
         WHERE id_seminar = %s
-        """, (id_seminar,))
+    """, (id_seminar,))
     
     qr = cursor.fetchone()
 
@@ -2015,6 +2006,7 @@ def activate_qr():
 
     print("NOW BACKEND :", now)
     print("EXPIRED BACKEND :", expired)
+
     cursor.execute("""
         UPDATE qr_codes
         SET
@@ -2027,7 +2019,16 @@ def activate_qr():
     print("ROWCOUNT:", cursor.rowcount)
 
     conn.commit()
+
+    #Debug
+    cursor.execute("""
+        SELECT activated_at, expired_at
+        FROM qr_codes
+        WHERE id_seminar=%s
+    """, (id_seminar,))
+
     print("SETELAH COMMIT:", cursor.fetchone())
+
     cursor.close()
     conn.close()
 
