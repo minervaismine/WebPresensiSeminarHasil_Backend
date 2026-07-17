@@ -1826,6 +1826,9 @@ def qr_status(id_seminar):
         cursor.close()
         conn.close()
 
+    print("DATABASE expired_at :", qr["expired_at"])
+    print("ISO YANG DIKIRIM    :", qr["expired_at"].isoformat())
+
     return jsonify({
         "success": True,
         "qr_code": qr["qr_code"],
@@ -2031,6 +2034,18 @@ def activate_qr():
 
     cursor.close()
     conn.close()
+
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("""
+    SELECT activated_at, expired_at
+    FROM qr_codes
+    WHERE id_seminar=%s
+    """, (id_seminar,))
+
+    print("DATABASE SETELAH UPDATE:", cursor.fetchone())
+
+    cursor.close()
 
     return jsonify ({
         "success": True,
