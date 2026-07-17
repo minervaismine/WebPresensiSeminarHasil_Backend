@@ -1795,20 +1795,14 @@ def qr_status(id_seminar):
             "message": "QR belum dibuat"
         }), 404
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
-    # DEBUG
-    print("DATABASE expired_at :", qr["expired_at"])
-    print("DATABASE type       :", type(qr["expired_at"]))
-    print("DATABASE tzinfo     :", qr["expired_at"].tzinfo if qr["expired_at"] else None)
-    print("NOW                :", now)
-    print("NOW tzinfo         :", now.tzinfo)
+    expired_at_aware = qr["expired_at"].replace(tzinfo=timezone.utc) if qr["expired_at"] else None
 
     if qr["status_qr"] == "active":
-        if qr["expired_at"] is None:
+        if expired_at_aware is None:
             qr["status_qr"] = "inactive"
-
-        elif qr["expired_at"] <= now:
+        elif expired_at_aware <= now:
             cursor.execute("""
                 UPDATE qr_codes
                 SET
@@ -1821,7 +1815,7 @@ def qr_status(id_seminar):
             conn.commit()
 
             qr["status_qr"] = "inactive"
-            qr["expired_at"] = None
+            expired_at_aware = None
 
         cursor.close()
         conn.close()
@@ -1833,7 +1827,8 @@ def qr_status(id_seminar):
         "success": True,
         "qr_code": qr["qr_code"],
         "status_qr": qr["status_qr"],
-        "expired_at": qr["expired_at"].isoformat() if qr["expired_at"] else None
+        "expired_at": expired_at_aware.isoformat() if expired_at_aware else None,
+        "server_time": now.isoformat()
     })
 
 #Menghubungkan data QR Code dengan data seminar
@@ -1884,7 +1879,7 @@ def generate_qr():
             "id_user": payload["id_user"],
             "id_seminar": seminar["id_seminar"],
             "role": payload["role"],
-            "exp": datetime.utcnow() + timedelta(minutes=10)
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=10)
         }
 
         qr_token = jwt.encode(
@@ -1892,8 +1887,6 @@ def generate_qr():
             SECRET_KEY,
             algorithm="HS256"
         )
-
-        print("QR YANG DIBUAT:", qr_token)
 
         # Cek apakah QR sudah ada
         cursor.execute("""
@@ -1904,14 +1897,14 @@ def generate_qr():
 
         existing_qr = cursor.fetchone()
 
+        now = datetime.now(timezone.utc)
+
         # Kalau QR belum ada, masukkan data ke tabel qr_codes
         if existing_qr:
             # Kalau QR masih aktif
-            if (
-                existing_qr["status_qr"] == "active"
-                and existing_qr["expired_at"]
-                and existing_qr["expired_at"] > datetime.now(timezone.utc)
-            ):
+            ex_expired_aware = existing_qr["expired_at"].replace(tzinfo=timezone.utc) if existing_qr["expired_at"] else None
+            
+            if existing_qr["status_qr"] == "active" and ex_expired_aware and ex_expired_aware > now:
                 cursor.close()
                 conn.close()
 
@@ -1919,7 +1912,8 @@ def generate_qr():
                     "success": True,
                     "qr_code": existing_qr["qr_code"],
                     "status_qr": "active",
-                    "expired_at": existing_qr["expired_at"].isoformat()
+                    "expired_at": existing_qr["expired_at"].isoformat(),
+                    "server_time": now.isoformat()
                 })
             
             # QR sudah ada tapi inactive/expired
@@ -1952,7 +1946,6 @@ def generate_qr():
             ))
 
         conn.commit()
-
         cursor.close()
         conn.close()
 
@@ -1960,7 +1953,8 @@ def generate_qr():
             "success": True,
             "qr_code": qr_token,
             "status_qr": "inactive",
-            "expired_at": None
+            "expired_at": None,
+            "server_time": now.isoformat()
         }), 200
     
     except jwt.ExpiredSignatureError:
@@ -1992,23 +1986,14 @@ def activate_qr():
         FROM qr_codes
         WHERE id_seminar = %s
     """, (id_seminar,))
-    
-    qr = cursor.fetchone()
 
-    if not qr:
+    if not cursor.fetchone():
         cursor.close()
         conn.close()
-
-        return jsonify({
-            "success": False,
-            "message": "QR Code belum dibuat"
-        }), 404
+        return jsonify({"success": False, "message": "QR Code belum dibuat"}), 404
     
     now = datetime.now(timezone.utc)
     expired = now + timedelta(minutes=10)
-
-    print("NOW BACKEND :", now)
-    print("EXPIRED BACKEND :", expired)
 
     cursor.execute("""
         UPDATE qr_codes
@@ -2019,19 +2004,7 @@ def activate_qr():
         WHERE id_seminar = %s           
     """, (now, expired, id_seminar))
 
-    print("ROWCOUNT:", cursor.rowcount)
-
     conn.commit()
-
-    #Debug
-    cursor.execute("""
-        SELECT activated_at, expired_at
-        FROM qr_codes
-        WHERE id_seminar=%s
-    """, (id_seminar,))
-
-    print("DATABASE SETELAH UPDATE:", cursor.fetchone())
-
     cursor.close()
     conn.close()
 
@@ -2039,7 +2012,8 @@ def activate_qr():
         "success": True,
         "message": "QR Code berhasil diaktifkan",
         "status_qr": "active",
-        "expired_at": expired.isoformat()
+        "expired_at": expired.isoformat(),
+        "server_time": now.isoformat()
     })
 
 #Menonaktifkan QR Code ketika waktu 10 menit selesai
