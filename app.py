@@ -1827,14 +1827,14 @@ def qr_status(id_seminar):
         conn.close()
 
     print("DATABASE expired_at :", qr["expired_at"])
-    print("ISO YANG DIKIRIM    :", qr["expired_at"].isoformat())
+    print("DATABASE isoformat  :", qr["expired_at"].isoformat() if qr["expired_at"] else None)
 
     return jsonify({
         "success": True,
         "qr_code": qr["qr_code"],
         "status_qr": qr["status_qr"],
         "expired_at": qr["expired_at"].isoformat() if qr["expired_at"] else None
-    }), 200
+    })
 
 #Menghubungkan data QR Code dengan data seminar
 @app.route("/generate-qr", methods=["POST"])
