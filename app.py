@@ -2030,22 +2030,10 @@ def activate_qr():
         WHERE id_seminar=%s
     """, (id_seminar,))
 
-    print("SETELAH COMMIT:", cursor.fetchone())
-
-    cursor.close()
-    conn.close()
-
-    cursor = conn.cursor(dictionary=True)
-
-    cursor.execute("""
-    SELECT activated_at, expired_at
-    FROM qr_codes
-    WHERE id_seminar=%s
-    """, (id_seminar,))
-
     print("DATABASE SETELAH UPDATE:", cursor.fetchone())
 
     cursor.close()
+    conn.close()
 
     return jsonify ({
         "success": True,
