@@ -233,13 +233,14 @@ def detail_riwayat_verifikasi(id_seminar):
     for item in data:
         #Format waktu scan
         if item["waktu_scan"]:
-            item["waktu_scan"] = item["waktu_scan"].strftime("%d %B %Y, %H:%M")
+            item["waktu_scan"] = item["waktu_scan"].isoformat()
 
         #Format waktu verifikasi
-        if item["waktu_verifikasi"]:
-            item["waktu_verifikasi"] = item["waktu_verifikasi"].strftime("%d %B %Y, %H:%M")
-        else:
-            item["waktu_verifikasi"] = "-"
+        item["waktu_verifikasi"] = (
+            item["waktu_verifikasi"].isoformat()
+            if item["waktu_verifikasi"]
+            else None
+        )
     
     cursor.close()
     conn.close()
@@ -348,7 +349,7 @@ def riwayat_verifikasi():
 
     for item in data:
         # Format tanggal
-        item["tanggal"] = item["tanggal"].strftime("%A, %d %B %Y")
+        item["tanggal"] = item["tanggal"].isoformat()
 
         # Format jam
         item["waktu_mulai"] = format_waktu(item["waktu_mulai"])
@@ -459,7 +460,7 @@ def riwayat_presensi_mahasiswa():
 
     for item in data:
         # Format tanggal
-        item["tanggal"] = item["tanggal"].strftime("%A, %d %B %Y")
+        item["tanggal"] = item["tanggal"].isoformat()
 
         # Format jam
         item["waktu_mulai"] = format_waktu(item["waktu_mulai"])
@@ -908,7 +909,7 @@ def lihat_daftar_hadir(id_seminar):
     seminar = cursor.fetchone()
 
     if seminar:
-        seminar["tanggal"] = seminar["tanggal"].strftime("%A, %d %B %Y")
+        seminar["tanggal"] = seminar["tanggal"].isoformat()
         seminar["waktu_mulai"] = format_waktu(seminar["waktu_mulai"])
         seminar["waktu_selesai"] = format_waktu(seminar["waktu_selesai"])
 
@@ -988,7 +989,7 @@ def lihat_daftar_hadir(id_seminar):
 
     for item in presensi:
         #Format waktu scan di tabel
-        item["waktu_scan"] = item["waktu_scan"].strftime("%d %b %Y, %H:%M")
+        item["waktu_scan"] = item["waktu_scan"].isoformat()
 
         #Menghitung jarak lokasi peserta saat scan
         jarak = hitung_jarak(
@@ -1092,7 +1093,7 @@ def verifikasi_presensi():
 
     for item in data:
         # Format tanggal
-        item["tanggal"] = item["tanggal"].strftime("%A, %d %B %Y")
+        item["tanggal"] = item["tanggal"].isoformat()
 
         # Format jam
         item["waktu_mulai"] = format_waktu(item["waktu_mulai"])
@@ -1225,7 +1226,7 @@ def daftar_hadir(id_seminar):
             item["status_lokasi"] = "sedang"
 
         #Format waktu saat peserta scan
-        item["waktu_scan"] = item["waktu_scan"].strftime("%d %B %Y, %H:%M")
+        item["waktu_scan"] = item["waktu_scan"] = item["waktu_scan"].isoformat()
 
     return jsonify({
         "data": data,
@@ -1681,10 +1682,7 @@ def get_data_seminar():
 
     for item in data:
         #Format tanggal
-        tanggal_asli = item["tanggal"]
-
-        item["tanggal_asli"] = tanggal_asli.strftime("%Y-%m-%d")
-        item["tanggal"] = tanggal_asli.strftime("%A, %d %B %Y")
+        item["tanggal"] = item["tanggal"].isoformat()
 
         #Format jam
         def format_time_iso(td):
