@@ -2078,6 +2078,14 @@ def scan_qr():
             "message": "QR Code tidak ditemukan"
         }), 400
     
+    if latitude is None or longitude is None:
+        print("LOKASI GPS TIDAK TERSEDIA DARI FRONTEND")
+        return jsonify({
+            "success": False,
+            "code": "LOCATION_MISSING",
+            "message": "Pastikan izin GPS/Lokasi di HP Anda sudah aktif."
+        }), 400
+    
     try:
         #Decode token login peserta seminar
         peserta = request.user
@@ -2199,14 +2207,15 @@ def scan_qr():
                 "message": "Anda sudah melakukan presensi"
             }), 400
         
-        if lokasi is None:
+        if lokasi is None or lokasi["latitude"] is None or lokasi["longitude"] is None:
             cursor.close()
             conn.close()
-
+            
             return jsonify({
                 "success": False,
-                "message": "Lokasi seminar tidak ditemukan"
-            }), 404
+                "code": "INVALID_SEMINAR_LOCATION",
+                "message": "Data koordinat lokasi seminar di database belum diatur."
+            }), 400
         
         jarak = hitung_jarak(
             float(latitude),
@@ -2278,6 +2287,14 @@ def scan_qr():
             "where": "scan_qr",
             "message": "QR Code tidak valid"
         }), 401
+    
+    except Exception as e:
+        print("SYSTEM ERROR ON SCAN_QR:", str(e)) # Cek terminal Flask Anda untuk detail error ini!
+        return jsonify({
+            "success": False,
+            "code": "SERVER_ERROR",
+            "message": f"Terjadi kesalahan internal server: {str(e)}"
+        }), 500
     
 #Menghubungkan data di halaman seminar saya (Penyelenggara)
 @app.route("/detail-seminar/<int:id_user>")
