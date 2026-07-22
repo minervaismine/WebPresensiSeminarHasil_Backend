@@ -34,28 +34,40 @@ TIMEZONE_INDO = timezone(timedelta(hours=8))
 
 #Fungsi helper untuk format waktu
 def parse_date(val):
+    if not val:
+        return date.today()
     if isinstance(val, datetime):
         return val.date()
     if isinstance(val, date):
         return val
     if isinstance(val, str):
-        return datetime.strptime(val.split(" ")[0], "%Y-%m-%d").date()
+        try:
+            return datetime.strptime(val.split(" ")[0], "%Y-%m-%d").date()
+        except ValueError:
+            return date.today()
     return date.today()
 
+
 def parse_time(val):
+    if not val:
+        return time(0, 0)
     if isinstance(val, time):
         return val
     if isinstance(val, datetime):
         return val.time()
-    if isinstance(val, timedelta):  # Menangani kolom TIME dari MySQL
+    if isinstance(val, timedelta):  # Tipe data TIME MySQL
         total_sec = int(val.total_seconds())
         h = (total_sec // 3600) % 24
         m = (total_sec % 3600) // 60
         return time(h, m)
     if isinstance(val, str):
-        clean = val.replace(".", ":").strip()
-        p = clean.split(":")
-        return time(int(p[0]), int(p[1]))
+        try:
+            clean = val.replace(".", ":").strip()
+            p = clean.split(":")
+            if len(p) >= 2:
+                return time(int(p[0]), int(p[1]))
+        except Exception:
+            return time(0, 0)
     return time(0, 0)
 
 #Fungsi helper untuk menghitung jarak antara lokasi dan perangkat mahasiswa ketika melakukan presensi menggunakan Haversine
@@ -915,20 +927,21 @@ def lihat_daftar_hadir(id_seminar):
     seminar = cursor.fetchone()
 
     if seminar:
-        # Gunakan Waktu Lokal Indonesia (Mencegah Bug UTC Railway)
-        now = datetime.now(TIMEZONE_INDO).replace(tzinfo=None)
+        # 1. Ambil waktu sekarang sesuai Timezone (Offset-Aware)
+        now_dt = datetime.now(TIMEZONE_INDO)
 
         tgl_seminar = parse_date(seminar["tanggal"])
         tm_mulai = parse_time(seminar["waktu_mulai"])
         tm_selesai = parse_time(seminar["waktu_selesai"])
 
-        dt_start = datetime.combine(tgl_seminar, tm_mulai)
-        dt_end = datetime.combine(tgl_seminar, tm_selesai)
+        # 2. Tambahkan .replace(tzinfo=TIMEZONE_INDO) agar setara dengan now_dt
+        dt_start = datetime.combine(tgl_seminar, tm_mulai).replace(tzinfo=TIMEZONE_INDO)
+        dt_end = datetime.combine(tgl_seminar, tm_selesai).replace(tzinfo=TIMEZONE_INDO)
 
-        # Penentuan Status Seminar
-        if now < dt_start:
+        # 3. Penentuan Status Seminar (Gunakan `now_dt`, BUKAN `now`)
+        if now_dt < dt_start:
             seminar["status_seminar"] = "Belum Dimulai"
-        elif dt_start <= now <= dt_end:
+        elif dt_start <= now_dt <= dt_end:
             seminar["status_seminar"] = "Sedang Berlangsung"
         else:
             seminar["status_seminar"] = "Selesai"
