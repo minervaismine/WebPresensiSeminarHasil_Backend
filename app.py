@@ -30,42 +30,33 @@ except:
     except:
         pass
 
+TIMEZONE_INDO = timezone(timedelta(hours=8))
+
 #Fungsi helper untuk format waktu
-def to_date_object(val):
-    if val is None:
-        return date.today()
+def parse_date(val):
     if isinstance(val, datetime):
         return val.date()
     if isinstance(val, date):
         return val
     if isinstance(val, str):
-        clean_str = val.split(" ")[0]
-        return datetime.strptime(clean_str, "%Y-%m-%d").date()
-    return val
+        return datetime.strptime(val.split(" ")[0], "%Y-%m-%d").date()
+    return date.today()
 
-# Fungsi helper konversi Waktu ke objek time (Agar tidak error)
-def to_time_object(val):
-    if val is None:
-        return time(0, 0)
-    if isinstance(val, datetime):
-        return val.time()
+def parse_time(val):
     if isinstance(val, time):
         return val
-    if isinstance(val, timedelta):
-        total_seconds = int(val.total_seconds())
-        hours = (total_seconds // 3600) % 24
-        minutes = (total_seconds % 3600) // 60
-        return time(hours, minutes)
+    if isinstance(val, datetime):
+        return val.time()
+    if isinstance(val, timedelta):  # Menangani kolom TIME dari MySQL
+        total_sec = int(val.total_seconds())
+        h = (total_sec // 3600) % 24
+        m = (total_sec % 3600) // 60
+        return time(h, m)
     if isinstance(val, str):
-        clean_str = val.replace(".", ":").strip()
-        parts = clean_str.split(":")
-        return time(int(parts[0]), int(parts[1]))
-    return val
-
-# Fungsi helper format waktu ke string
-def format_waktu(waktu):
-    tm = to_time_object(waktu)
-    return tm.strftime("%H:%M")
+        clean = val.replace(".", ":").strip()
+        p = clean.split(":")
+        return time(int(p[0]), int(p[1]))
+    return time(0, 0)
 
 #Fungsi helper untuk menghitung jarak antara lokasi dan perangkat mahasiswa ketika melakukan presensi menggunakan Haversine
 def hitung_jarak(lat1, lon1, lat2, lon2):
@@ -924,18 +915,17 @@ def lihat_daftar_hadir(id_seminar):
     seminar = cursor.fetchone()
 
     if seminar:
-        now = datetime.now()
+        # Gunakan Waktu Lokal Indonesia (Mencegah Bug UTC Railway)
+        now = datetime.now(TIMEZONE_INDO).replace(tzinfo=None)
 
-        # 1. Konversi Tanggal & Waktu menggunakan helper yang aman
-        tgl_seminar = to_date_object(seminar["tanggal"])
-        tm_mulai = to_time_object(seminar["waktu_mulai"])
-        tm_selesai = to_time_object(seminar["waktu_selesai"])
+        tgl_seminar = parse_date(seminar["tanggal"])
+        tm_mulai = parse_time(seminar["waktu_mulai"])
+        tm_selesai = parse_time(seminar["waktu_selesai"])
 
-        # 2. Gabungkan Tanggal + Jam menjadi datetime utuh
         dt_start = datetime.combine(tgl_seminar, tm_mulai)
         dt_end = datetime.combine(tgl_seminar, tm_selesai)
 
-        # 3. Hitung Status Seminar
+        # Penentuan Status Seminar
         if now < dt_start:
             seminar["status_seminar"] = "Belum Dimulai"
         elif dt_start <= now <= dt_end:
@@ -943,10 +933,10 @@ def lihat_daftar_hadir(id_seminar):
         else:
             seminar["status_seminar"] = "Selesai"
 
-        # 4. Format String untuk React JSON
-        seminar["tanggal"] = tgl_seminar.isoformat()  # Menghasilkan format "YYYY-MM-DD"
-        seminar["waktu_mulai"] = tm_mulai.strftime("%H.%M")
-        seminar["waktu_selesai"] = tm_selesai.strftime("%H.%M")
+        # Format string aman untuk React JS
+        seminar["tanggal"] = tgl_seminar.strftime("%Y-%m-%d")
+        seminar["waktu_mulai"] = tm_mulai.strftime("%H:%M")
+        seminar["waktu_selesai"] = tm_selesai.strftime("%H:%M")
 
     #Hitung total data
     count_query = """
