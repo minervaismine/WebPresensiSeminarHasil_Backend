@@ -31,36 +31,42 @@ except:
         pass
 
 #Fungsi helper untuk format waktu
-def format_waktu(waktu):
-    if waktu is None:
-        return ""
-    if isinstance(waktu, timedelta):
-        total = int(waktu.total_seconds())
-        jam = total // 3600
-        menit = (total % 3600) // 60
-        return f"{jam:02d}.{menit:02d}"
-    elif isinstance(waktu, (time, datetime)):
-        return waktu.strftime("%H.%M")
-    elif isinstance(waktu, str):
-        return waktu.replace(":", ".")[:5]
-    return str(waktu)
+def to_date_object(val):
+    if val is None:
+        return date.today()
+    if isinstance(val, datetime):
+        return val.date()
+    if isinstance(val, date):
+        return val
+    if isinstance(val, str):
+        # Ambil YYYY-MM-DD meskipun ada format jam
+        clean_str = val.split(" ")[0]
+        return datetime.strptime(clean_str, "%Y-%m-%d").date()
+    return val
 
 # Fungsi helper konversi Waktu ke objek time (Agar tidak error)
-def to_time_object(waktu):
-    if waktu is None:
+def to_time_object(val):
+    if val is None:
         return time(0, 0)
-    if isinstance(waktu, timedelta):
-        total_seconds = int(waktu.total_seconds())
-        hours = total_seconds // 3600
+    if isinstance(val, datetime):
+        return val.time()
+    if isinstance(val, time):
+        return val
+    if isinstance(val, timedelta):
+        total_seconds = int(val.total_seconds())
+        hours = (total_seconds // 3600) % 24
         minutes = (total_seconds % 3600) // 60
         return time(hours, minutes)
-    elif isinstance(waktu, time):
-        return waktu
-    elif isinstance(waktu, str):
-        waktu_clean = waktu.replace(".", ":")
-        parts = waktu_clean.split(":")
+    if isinstance(val, str):
+        clean_str = val.replace(".", ":").strip()
+        parts = clean_str.split(":")
         return time(int(parts[0]), int(parts[1]))
-    return waktu
+    return val
+
+# Fungsi helper format waktu ke string
+def format_waktu(waktu):
+    tm = to_time_object(waktu)
+    return tm.strftime("%H.%M")
 
 #Fungsi helper untuk menghitung jarak antara lokasi dan perangkat mahasiswa ketika melakukan presensi menggunakan Haversine
 def hitung_jarak(lat1, lon1, lat2, lon2):
@@ -921,22 +927,16 @@ def lihat_daftar_hadir(id_seminar):
     if seminar:
         now = datetime.now()
 
-        # 1. Pastikan tanggal berbentuk date
-        tgl_seminar = seminar["tanggal"]
-        if isinstance(tgl_seminar, datetime):
-            tgl_seminar = tgl_seminar.date()
-        elif isinstance(tgl_seminar, str):
-            tgl_seminar = datetime.strptime(tgl_seminar, "%Y-%m-%d").date()
-
-        # 2. Konversi waktu ke datetime.time
+        # 1. Konversi Tanggal & Waktu menggunakan helper yang aman
+        tgl_seminar = to_date_object(seminar["tanggal"])
         tm_mulai = to_time_object(seminar["waktu_mulai"])
         tm_selesai = to_time_object(seminar["waktu_selesai"])
 
-        # 3. Gabungkan Tanggal + Jam (Tahun 2026)
+        # 2. Gabungkan Tanggal + Jam menjadi datetime utuh
         dt_start = datetime.combine(tgl_seminar, tm_mulai)
         dt_end = datetime.combine(tgl_seminar, tm_selesai)
 
-        # 4. Tentukan Status
+        # 3. Hitung Status Seminar
         if now < dt_start:
             seminar["status_seminar"] = "Belum Dimulai"
         elif dt_start <= now <= dt_end:
@@ -944,8 +944,8 @@ def lihat_daftar_hadir(id_seminar):
         else:
             seminar["status_seminar"] = "Selesai"
 
-        # 5. Format string akhir untuk React (Langsung pakai .strftime dari tm_mulai/tm_selesai)
-        seminar["tanggal"] = tgl_seminar.isoformat()
+        # 4. Format String untuk React JSON
+        seminar["tanggal"] = tgl_seminar.isoformat()  # Menghasilkan format "YYYY-MM-DD"
         seminar["waktu_mulai"] = tm_mulai.strftime("%H.%M")
         seminar["waktu_selesai"] = tm_selesai.strftime("%H.%M")
 
