@@ -741,7 +741,6 @@ def laporan_presensi():
         where_clause = "WHERE " + " AND ".join(conditions)
 
     having_clause = ""
-
     if status == "Memenuhi":
         having_clause = """
             HAVING COUNT(
@@ -808,11 +807,7 @@ def laporan_presensi():
         ORDER BY {allowed_columns[sort_by]} {sort_order.upper()}
         LIMIT %s OFFSET %s
     """
-
-    if search:
-        keyword = f"%{search}%"
-        data_params.extend([keyword, keyword])
-
+    
     data_params = params.copy()
     data_params.extend([limit, offset])
 
