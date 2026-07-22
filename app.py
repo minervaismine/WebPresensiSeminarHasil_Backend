@@ -992,6 +992,10 @@ def lihat_daftar_hadir(id_seminar):
         keyword = f"%{search}%"
         count_params.extend([keyword, keyword])
 
+    if status_verifikasi:
+        count_query += " AND p.status_verifikasi = %s"
+        count_params.append(status_verifikasi)
+
     cursor.execute(count_query, tuple(count_params))
     total_data = cursor.fetchone()["total"]
 
