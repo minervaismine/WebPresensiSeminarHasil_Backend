@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from config import get_db_connection
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from math import ceil, radians, sin, cos, sqrt, atan2
 import jwt
 import locale
@@ -32,13 +32,35 @@ except:
 
 #Fungsi helper untuk format waktu
 def format_waktu(waktu):
+    if waktu is None:
+        return ""
     if isinstance(waktu, timedelta):
         total = int(waktu.total_seconds())
         jam = total // 3600
         menit = (total % 3600) // 60
         return f"{jam:02d}.{menit:02d}"
-    else:
+    elif isinstance(waktu, (time, datetime)):
         return waktu.strftime("%H.%M")
+    elif isinstance(waktu, str):
+        return waktu.replace(":", ".")[:5]
+    return str(waktu)
+
+# Fungsi helper konversi Waktu ke objek time (Agar tidak error)
+def to_time_object(waktu):
+    if waktu is None:
+        return time(0, 0)
+    if isinstance(waktu, timedelta):
+        total_seconds = int(waktu.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        return time(hours, minutes)
+    elif isinstance(waktu, time):
+        return waktu
+    elif isinstance(waktu, str):
+        waktu_clean = waktu.replace(".", ":")
+        parts = waktu_clean.split(":")
+        return time(int(parts[0]), int(parts[1]))
+    return waktu
 
 #Fungsi helper untuk menghitung jarak antara lokasi dan perangkat mahasiswa ketika melakukan presensi menggunakan Haversine
 def hitung_jarak(lat1, lon1, lat2, lon2):
@@ -887,7 +909,7 @@ def lihat_daftar_hadir(id_seminar):
             s.tanggal,
             s.waktu_mulai,
             s.waktu_selesai,
-            m.nama,    
+            m.nama
         FROM seminar s
         JOIN mahasiswa m
             ON s.id_mahasiswa = m.id_user
@@ -898,39 +920,34 @@ def lihat_daftar_hadir(id_seminar):
 
     if seminar:
         now = datetime.now()
-        current_date = now.date()
-        current_time = now.time()
 
-        # Konversi tanggal seminar
+        # 1. Pastikan tanggal berbentuk date
         tgl_seminar = seminar["tanggal"]
-        if isinstance(tgl_seminar, str):
+        if isinstance(tgl_seminar, datetime):
+            tgl_seminar = tgl_seminar.date()
+        elif isinstance(tgl_seminar, str):
             tgl_seminar = datetime.strptime(tgl_seminar, "%Y-%m-%d").date()
 
-        # Konversi waktu_mulai & waktu_selesai jika mengembalikan timedelta / string
-        waktu_mulai = seminar["waktu_mulai"]
-        waktu_selesai = seminar["waktu_selesai"]
+        # 2. Konversi waktu ke datetime.time
+        tm_mulai = to_time_object(seminar["waktu_mulai"])
+        tm_selesai = to_time_object(seminar["waktu_selesai"])
 
-        if isinstance(waktu_mulai, timedelta):
-            waktu_mulai = (datetime.min + waktu_mulai).time()
-        elif isinstance(waktu_mulai, str):
-            waktu_mulai = datetime.strptime(waktu_mulai, "%H:%M:%S").time()
+        # 3. Gabungkan Tanggal + Jam (Tahun 2026)
+        dt_start = datetime.combine(tgl_seminar, tm_mulai)
+        dt_end = datetime.combine(tgl_seminar, tm_selesai)
 
-        if isinstance(waktu_selesai, timedelta):
-            waktu_selesai = (datetime.min + waktu_selesai).time()
-        elif isinstance(waktu_selesai, str):
-            waktu_selesai = datetime.strptime(waktu_selesai, "%H:%M:%S").time()
-
-        # Hitung status berdasarkan waktu lokal
-        if current_date > tgl_seminar or (current_date == tgl_seminar and current_time > waktu_selesai):
-            seminar["status_seminar"] = "Selesai"
-        elif current_date == tgl_seminar and (waktu_mulai <= current_time <= waktu_selesai):
+        # 4. Tentukan Status
+        if now < dt_start:
+            seminar["status_seminar"] = "Belum Dimulai"
+        elif dt_start <= now <= dt_end:
             seminar["status_seminar"] = "Sedang Berlangsung"
         else:
-            seminar["status_seminar"] = "Belum Dimulai"
+            seminar["status_seminar"] = "Selesai"
 
-        seminar["tanggal"] = seminar["tanggal"].isoformat()
-        seminar["waktu_mulai"] = format_waktu(seminar["waktu_mulai"])
-        seminar["waktu_selesai"] = format_waktu(seminar["waktu_selesai"])
+        # 5. Format string akhir untuk React (Langsung pakai .strftime dari tm_mulai/tm_selesai)
+        seminar["tanggal"] = tgl_seminar.isoformat()
+        seminar["waktu_mulai"] = tm_mulai.strftime("%H.%M")
+        seminar["waktu_selesai"] = tm_selesai.strftime("%H.%M")
 
     #Hitung total data
     count_query = """
