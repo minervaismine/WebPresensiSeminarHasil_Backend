@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from config import get_db_connection
-from datetime import datetime, time, timedelta, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from math import ceil, radians, sin, cos, sqrt, atan2
 import jwt
 import locale
@@ -39,7 +39,6 @@ def to_date_object(val):
     if isinstance(val, date):
         return val
     if isinstance(val, str):
-        # Ambil YYYY-MM-DD meskipun ada format jam
         clean_str = val.split(" ")[0]
         return datetime.strptime(clean_str, "%Y-%m-%d").date()
     return val
@@ -66,7 +65,7 @@ def to_time_object(val):
 # Fungsi helper format waktu ke string
 def format_waktu(waktu):
     tm = to_time_object(waktu)
-    return tm.strftime("%H.%M")
+    return tm.strftime("%H:%M")
 
 #Fungsi helper untuk menghitung jarak antara lokasi dan perangkat mahasiswa ketika melakukan presensi menggunakan Haversine
 def hitung_jarak(lat1, lon1, lat2, lon2):
