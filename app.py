@@ -887,19 +887,7 @@ def lihat_daftar_hadir(id_seminar):
             s.tanggal,
             s.waktu_mulai,
             s.waktu_selesai,
-            m.nama,
-            
-            CASE
-                WHEN CURDATE() > DATE(s.tanggal)
-                   OR (CURDATE() = DATE(s.tanggal) AND CURTIME() > s.waktu_selesai)
-                   THEN 'Selesai'
-                
-                WHEN CURDATE() = DATE(s.tanggal)
-                   AND CURTIME() BETWEEN s.waktu_mulai AND s.waktu_selesai
-                   THEN 'Sedang Berlangsung'
-                ELSE 'Belum Dimulai'
-            END AS status_seminar
-                   
+            m.nama,    
         FROM seminar s
         JOIN mahasiswa m
             ON s.id_mahasiswa = m.id_user
@@ -909,6 +897,37 @@ def lihat_daftar_hadir(id_seminar):
     seminar = cursor.fetchone()
 
     if seminar:
+        now = datetime.now()
+        current_date = now.date()
+        current_time = now.time()
+
+        # Konversi tanggal seminar
+        tgl_seminar = seminar["tanggal"]
+        if isinstance(tgl_seminar, str):
+            tgl_seminar = datetime.strptime(tgl_seminar, "%Y-%m-%d").date()
+
+        # Konversi waktu_mulai & waktu_selesai jika mengembalikan timedelta / string
+        waktu_mulai = seminar["waktu_mulai"]
+        waktu_selesai = seminar["waktu_selesai"]
+
+        if isinstance(waktu_mulai, timedelta):
+            waktu_mulai = (datetime.min + waktu_mulai).time()
+        elif isinstance(waktu_mulai, str):
+            waktu_mulai = datetime.strptime(waktu_mulai, "%H:%M:%S").time()
+
+        if isinstance(waktu_selesai, timedelta):
+            waktu_selesai = (datetime.min + waktu_selesai).time()
+        elif isinstance(waktu_selesai, str):
+            waktu_selesai = datetime.strptime(waktu_selesai, "%H:%M:%S").time()
+
+        # Hitung status berdasarkan waktu lokal
+        if current_date > tgl_seminar or (current_date == tgl_seminar and current_time > waktu_selesai):
+            seminar["status_seminar"] = "Selesai"
+        elif current_date == tgl_seminar and (waktu_mulai <= current_time <= waktu_selesai):
+            seminar["status_seminar"] = "Sedang Berlangsung"
+        else:
+            seminar["status_seminar"] = "Belum Dimulai"
+
         seminar["tanggal"] = seminar["tanggal"].isoformat()
         seminar["waktu_mulai"] = format_waktu(seminar["waktu_mulai"])
         seminar["waktu_selesai"] = format_waktu(seminar["waktu_selesai"])
