@@ -271,16 +271,18 @@ def detail_riwayat_verifikasi(id_seminar):
     data = cursor.fetchall()
 
     for item in data:
-        #Format waktu scan
+        # Format waktu scan
         if item["waktu_scan"]:
-            item["waktu_scan"] = item["waktu_scan"].isoformat()
+            # Anggap naive datetime sebagai UTC, lalu konversi ke TIMEZONE_INDO
+            dt_scan = item["waktu_scan"].replace(tzinfo=timezone.utc).astimezone(TIMEZONE_INDO)
+            item["waktu_scan"] = dt_scan.isoformat()
 
-        #Format waktu verifikasi
-        item["waktu_verifikasi"] = (
-            item["waktu_verifikasi"].isoformat()
-            if item["waktu_verifikasi"]
-            else None
-        )
+        # Format waktu verifikasi
+        if item["waktu_verifikasi"]:
+            dt_verif = item["waktu_verifikasi"].replace(tzinfo=timezone.utc).astimezone(TIMEZONE_INDO)
+            item["waktu_verifikasi"] = dt_verif.isoformat()
+        else:
+            item["waktu_verifikasi"] = None
     
     cursor.close()
     conn.close()
