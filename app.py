@@ -70,6 +70,16 @@ def parse_time(val):
             return time(0, 0)
     return time(0, 0)
 
+def format_waktu(val):
+    """
+    Menerima input jam dari database (None, timedelta, string, time)
+    dan mengembalikan string format 'HH:MM' tanpa melempar error.
+    """
+    if val is None:
+        return "-"
+    t = parse_time(val)
+    return t.strftime("%H:%M")
+
 #Fungsi helper untuk menghitung jarak antara lokasi dan perangkat mahasiswa ketika melakukan presensi menggunakan Haversine
 def hitung_jarak(lat1, lon1, lat2, lon2):
     R = 6371000 #meter
@@ -927,29 +937,39 @@ def lihat_daftar_hadir(id_seminar):
     seminar = cursor.fetchone()
 
     if seminar:
-        # 1. Ambil waktu sekarang sesuai Timezone (Offset-Aware)
-        now_dt = datetime.now(TIMEZONE_INDO)
+        try:
+            # 1. Ambil waktu sekarang sesuai Timezone
+            now_dt = datetime.now(TIMEZONE_INDO)
 
-        tgl_seminar = parse_date(seminar["tanggal"])
-        tm_mulai = parse_time(seminar["waktu_mulai"])
-        tm_selesai = parse_time(seminar["waktu_selesai"])
+            # 2. Parse tanggal & waktu langsung dari objek 'seminar'
+            d_obj = parse_date(seminar.get("tanggal"))
+            tm_mulai = parse_time(seminar.get("waktu_mulai"))
+            tm_selesai = parse_time(seminar.get("waktu_selesai"))
 
-        # 2. Tambahkan .replace(tzinfo=TIMEZONE_INDO) agar setara dengan now_dt
-        dt_start = datetime.combine(tgl_seminar, tm_mulai).replace(tzinfo=TIMEZONE_INDO)
-        dt_end = datetime.combine(tgl_seminar, tm_selesai).replace(tzinfo=TIMEZONE_INDO)
+            # 3. Gabungkan tanggal & waktu
+            dt_start = datetime.combine(d_obj, tm_mulai).replace(tzinfo=TIMEZONE_INDO)
+            dt_end = datetime.combine(d_obj, tm_selesai).replace(tzinfo=TIMEZONE_INDO)
 
-        # 3. Penentuan Status Seminar (Gunakan `now_dt`, BUKAN `now`)
-        if now_dt < dt_start:
-            seminar["status_seminar"] = "Belum Dimulai"
-        elif dt_start <= now_dt <= dt_end:
-            seminar["status_seminar"] = "Sedang Berlangsung"
-        else:
-            seminar["status_seminar"] = "Selesai"
+            # 4. Hitung status seminar
+            if now_dt < dt_start:
+                status_val = "Belum Dimulai"
+            elif dt_start <= now_dt <= dt_end:
+                status_val = "Sedang Berlangsung"
+            else:
+                status_val = "Selesai"
 
-        # Format string aman untuk React JS
-        seminar["tanggal"] = tgl_seminar.strftime("%Y-%m-%d")
-        seminar["waktu_mulai"] = tm_mulai.strftime("%H:%M")
-        seminar["waktu_selesai"] = tm_selesai.strftime("%H:%M")
+            # Simpan langsung ke dictionary 'seminar'
+            seminar["status"] = status_val
+            seminar["status_seminar"] = status_val
+
+            # Format string untuk dikirim ke React
+            seminar["tanggal"] = d_obj.strftime("%Y-%m-%d")
+            seminar["waktu_mulai"] = tm_mulai.strftime("%H:%M")
+            seminar["waktu_selesai"] = tm_selesai.strftime("%H:%M")
+
+        except Exception as e:
+            print(f"[WARNING] Gagal memproses status detail seminar ID {id_seminar}: {e}")
+            seminar["status_seminar"] = "-"
 
     #Hitung total data
     count_query = """
