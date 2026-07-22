@@ -1536,16 +1536,14 @@ def search_mahasiswa():
     keyword = f"%{search}%"
 
     cursor.execute("""
-        SELECT
-            id_user,
-            nama,
-            nim
-        FROM mahasiswa
-        WHERE
-            nama LIKE %s
-            OR nim LIKE %s
-        ORDER BY nama
-        LIMIT 10
+        SELECT 
+            m.id_user, 
+            m.nama, 
+            m.nim,
+            CASE WHEN s.id_seminar IS NOT NULL THEN TRUE ELSE FALSE END AS memiliki_seminar
+        FROM mahasiswa m
+        LEFT JOIN seminar s ON m.id_user = s.id_mahasiswa
+        WHERE m.nama LIKE %s OR m.nim LIKE %s
     """, (keyword, keyword))
 
     data = cursor.fetchall()
