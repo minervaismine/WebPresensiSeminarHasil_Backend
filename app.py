@@ -2554,7 +2554,7 @@ def login():
         payload = {
             "id_user": user["id_user"],
             "username": user["username"],
-            "role": user["role"],
+            "role": str(user["role"]).strip().lower(),
             "memiliki_seminar": memiliki_seminar,
             "exp": datetime.now(timezone.utc) + timedelta(hours=3)
         }
@@ -2568,6 +2568,7 @@ def login():
         # Menyembunyikan token dari body response JSON
         res_data = {
             "success": True,
+            "token": token,
             "user": {
                 "id_user": user["id_user"],
                 "id_mahasiswa": user["id_user"],
