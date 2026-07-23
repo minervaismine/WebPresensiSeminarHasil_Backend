@@ -1475,19 +1475,45 @@ def add_lokasi():
     conn = get_db_connection()
     cursor = conn.cursor()
 
+    # Cek apakah nama lokasi sudah digunakan
+    cursor.execute("""
+        SELECT id_lokasi FROM lokasi_seminar 
+        WHERE LOWER(nama_lokasi) = LOWER(%s)
+    """, (nama_lokasi.strip(),))
+    if cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return jsonify({
+            "message": "Nama lokasi sudah terdaftar! Gunakan nama lokasi lain.",
+            "field": "nama_lokasi"
+        }), 400
+
+    # Cek apakah titik koordinat (Latitude & Longitude) sudah pernah ada
+    cursor.execute("""
+        SELECT id_lokasi FROM lokasi_seminar 
+        WHERE latitude = %s AND longitude = %s
+    """, (latitude, longitude))
+    if cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return jsonify({
+            "message": "Titik lokasi (latitude & longitude) tersebut sudah ada di database!",
+            "field": "koordinat"
+        }), 400
+
+    # Simpan data jika tidak ada data duplikat
     cursor.execute("""
         INSERT INTO lokasi_seminar
         (nama_lokasi, latitude, longitude, radius)
         VALUES (%s, %s, %s, %s)
     """, (
-        nama_lokasi,
+        nama_lokasi.strip(),
         latitude,
         longitude,
         radius
     ))
 
     conn.commit()
-
     cursor.close()
     conn.close()
 
