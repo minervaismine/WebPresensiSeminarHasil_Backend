@@ -2522,9 +2522,6 @@ def login():
 
         # Username salah
         if not user:
-            cursor.close()
-            conn.close()
-
             return jsonify({
                 "success": False,
                 "field": "username",
@@ -2533,9 +2530,6 @@ def login():
 
         # Password salah
         if password != user["password"]:
-            cursor.close()
-            conn.close()
-
             return jsonify({
                 "success": False,
                 "field": "password",
