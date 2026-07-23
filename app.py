@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, make_response
 from flask_cors import CORS
 from config import get_db_connection
 from datetime import date, datetime, time, timedelta, timezone
@@ -2495,89 +2495,113 @@ def login():
     username = data.get("username")
     password = data.get("password")
 
+    # Validasi input jika kosong
+    if not username or not password:
+        return jsonify({
+            "success": False,
+            "message": "Username dan password wajib diisi"
+        }), 400
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    cursor.execute("""
-        SELECT
-            u.*,
-            m.nim,
-            m.nama,
-            m.angkatan
-        FROM users u
-        LEFT JOIN mahasiswa m
-            ON u.id_user = m.id_user
-        WHERE u.username = %s
-    """, (username,))
-
-    user = cursor.fetchone()
-
-    # Username salah
-    if not user:
-        cursor.close()
-        conn.close()
-
-        return jsonify({
-            "success": False,
-            "field": "username",
-            "message": "Username salah"
-        }), 401
-
-    # Password salah
-    if password != user["password"]:
-        cursor.close()
-        conn.close()
-
-        return jsonify({
-            "success": False,
-            "field": "password",
-            "message": "Password salah"
-        }), 401
-
-    # Default
-    memiliki_seminar = False
-
-    # Jika mahasiswa, cek apakah memiliki seminar
-    if user["role"] == "mahasiswa":
+    try:
         cursor.execute("""
-            SELECT 1
-            FROM seminar
-            WHERE id_mahasiswa = %s
-            LIMIT 1
-        """, (user["id_user"],))
+            SELECT
+                u.*,
+                m.nim,
+                m.nama,
+                m.angkatan
+            FROM users u
+            LEFT JOIN mahasiswa m
+                ON u.id_user = m.id_user
+            WHERE u.username = %s
+        """, (username,))
 
-        memiliki_seminar = cursor.fetchone() is not None
+        user = cursor.fetchone()
 
-    payload = {
-        "id_user": user["id_user"],
-        "username": user["username"],
-        "role": user["role"],
-        "memiliki_seminar": memiliki_seminar,
-        "exp": datetime.utcnow() + timedelta(hours=3)
-    }
+        # Username salah
+        if not user:
+            cursor.close()
+            conn.close()
 
-    token = jwt.encode(
-        payload,
-        SECRET_KEY,
-        algorithm="HS256"
-    )
+            return jsonify({
+                "success": False,
+                "field": "username",
+                "message": "Username salah"
+            }), 401
 
-    cursor.close()
-    conn.close()
+        # Password salah
+        if password != user["password"]:
+            cursor.close()
+            conn.close()
 
-    return jsonify({
-        "success": True,
-        "token": token,
-        "user": {
+            return jsonify({
+                "success": False,
+                "field": "password",
+                "message": "Password salah"
+            }), 401
+
+        # Default
+        memiliki_seminar = False
+
+        # Jika role mahasiswa, cek apakah memiliki seminar
+        if user["role"] == "mahasiswa":
+            cursor.execute("""
+                SELECT 1
+                FROM seminar
+                WHERE id_mahasiswa = %s
+                LIMIT 1
+            """, (user["id_user"],))
+
+            memiliki_seminar = cursor.fetchone() is not None
+
+        # Membuat payload dan token JWT
+        payload = {
             "id_user": user["id_user"],
-            "id_mahasiswa": user["id_user"],
             "username": user["username"],
             "role": user["role"],
-            "nim": user["nim"],
-            "nama": user["nama"],
-            "memiliki_seminar": memiliki_seminar
+            "memiliki_seminar": memiliki_seminar,
+            "exp": datetime.now(timezone.utc) + timedelta(hours=3)
         }
-    })
+
+        token = jwt.encode(
+            payload,
+            SECRET_KEY,
+            algorithm="HS256"
+        )
+
+        # Menyembunyikan token dari body response JSON
+        res_data = {
+            "success": True,
+            "user": {
+                "id_user": user["id_user"],
+                "id_mahasiswa": user["id_user"],
+                "username": user["username"],
+                "role": user["role"],
+                "nim": user["nim"],
+                "nama": user["nama"],
+                "memiliki_seminar": memiliki_seminar
+            }
+        }
+
+        response = make_response(jsonify(res_data), 200)
+
+        # Kirim Token via HttpOnly Cookie (Tidak bisa diakses via JavaScript/Inspect Element)
+        response.set_cookie(
+            key="access_token",
+            value=token,
+            httponly=True,       # Menyembunyikan token dari JavaScript
+            secure=False,        # Ubah ke True jika memakai HTTPS (Server Production)
+            samesite="Lax",      # Proteksi serangan CSRF
+            max_age=3600 * 3     # Kadaluarsa dalam 3 jam
+        )
+
+        return response
+
+    finally:
+        cursor.close()
+        conn.close()
 
 #Testing BE
 @app.route("/")
