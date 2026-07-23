@@ -1955,23 +1955,9 @@ def qr_status(id_seminar):
 @login_required
 @role_required("mahasiswa")
 def generate_qr():
-    token = request.headers.get("Authorization")
-
-    if not token:
-        return jsonify({
-            "success": False,
-            "message": "Token tidak ditemukan"
-        }), 401
-    
-    token = token.replace("Bearer ", "")
+    user_payload = request.user
 
     try:
-        payload = jwt.decode(
-            token,
-            SECRET_KEY,
-            algorithms=["HS256"]
-        )
-
         #Mengambil data seminar dari database
         conn = get_db_connection()
         cursor = conn.cursor(dictionary=True)
@@ -1980,7 +1966,7 @@ def generate_qr():
             SELECT *
             FROM seminar
             WHERE id_mahasiswa = %s
-        """, (payload["id_user"],))
+        """, (user_payload["id_user"],))
 
         seminar = cursor.fetchone()
 
@@ -1995,9 +1981,9 @@ def generate_qr():
 
         #Membuat JWT QR
         qr_payload = {
-            "id_user": payload["id_user"],
+            "id_user": user_payload["id_user"],
             "id_seminar": seminar["id_seminar"],
-            "role": payload["role"],
+            "role": user_payload["role"],
             "exp": datetime.now(timezone.utc) + timedelta(minutes=10)
         }
 
@@ -2015,7 +2001,6 @@ def generate_qr():
         """, (seminar["id_seminar"],))
 
         existing_qr = cursor.fetchone()
-
         now = datetime.now(timezone.utc)
 
         # Kalau QR belum ada, masukkan data ke tabel qr_codes
@@ -2076,17 +2061,12 @@ def generate_qr():
             "server_time": now.isoformat()
         }), 200
     
-    except jwt.ExpiredSignatureError:
+    except Exception as e:
+        print("Error generate_qr:", e)
         return jsonify({
             "success": False,
-            "message": "Token expired"
-        }), 401
-    
-    except jwt.InvalidTokenError:
-        return jsonify({
-            "success": False,
-            "message": "Token tidak valid"
-        }), 401
+            "message": "Terjadi kesalahan pada server"
+        }), 500
 
 #Mengaktifkan QR Code
 @app.route("/activate-qr", methods=["POST"])
