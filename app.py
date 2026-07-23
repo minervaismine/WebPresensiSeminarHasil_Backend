@@ -97,28 +97,21 @@ def hitung_jarak(lat1, lon1, lat2, lon2):
 def login_required(f):
     @wraps(f)
     def decorated(*args, ** kwargs):
-        token = request.headers.get("Authorization")
-
-        print("Authorization Header:", token)
+        # Ambil token dari HttpOnly Cookie
+        token = request.cookies.get("access_token")
 
         if not token:
             return jsonify({
                 "success": False,
-                "message": "Token tidak ditemukan"
+                "message": "Token tidak ditemukan di cookie"
             }), 401
         
         try:
-            token = token.replace("Bearer ", "")
-
-            print("SECRET_KEY:", SECRET_KEY)
-            print("TOKEN:", token)
-
             payload = jwt.decode(
                 token,
                 SECRET_KEY,
                 algorithms=["HS256"]
             )
-            print("PAYLOAD:", payload)
 
             request.user = payload
 
@@ -2568,7 +2561,6 @@ def login():
         # Menyembunyikan token dari body response JSON
         res_data = {
             "success": True,
-            "token": token,
             "user": {
                 "id_user": user["id_user"],
                 "id_mahasiswa": user["id_user"],
