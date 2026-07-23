@@ -2579,8 +2579,8 @@ def login():
             key="access_token",
             value=token,
             httponly=True,       # Menyembunyikan token dari JavaScript
-            secure=False,        # Ubah ke True jika memakai HTTPS (Server Production)
-            samesite="Lax",      # Proteksi serangan CSRF
+            secure=True,         # Wajib True karena menggunakan HTTPS di Production (Railway)
+            samesite="None",     # Wajib "None" jika Frontend & Backend beda domain/URL
             max_age=3600 * 3     # Kadaluarsa dalam 3 jam
         )
 
