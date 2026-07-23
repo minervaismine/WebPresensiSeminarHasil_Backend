@@ -1360,41 +1360,76 @@ def update_lokasi(id_lokasi):
     longitude = data.get("longitude")
     radius = data.get("radius")
 
+    if not nama_lokasi or latitude is None or longitude is None:
+        return jsonify({"message": "Data belum lengkap"}), 400
+
+    # Konversi latitude dan longitude ke float
+    try:
+        lat_float = float(latitude)
+        lng_float = float(longitude)
+    except (ValueError, TypeError):
+        return jsonify({"message": "Format latitude/longitude tidak valid"}), 400
+
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        UPDATE lokasi_seminar
-        SET
-            nama_lokasi = %s,
-            latitude = %s,
-            longitude = %s,
-            radius = %s
-        WHERE id_lokasi = %s
-    """, (
-        nama_lokasi,
-        latitude,
-        longitude,
-        radius,
-        id_lokasi
-    ))
+    try:
+        # Cek apakah nama lokasi sudah digunakan
+        cursor.execute("""
+            SELECT id_lokasi FROM lokasi_seminar 
+            WHERE LOWER(nama_lokasi) = LOWER(%s) AND id_lokasi != %s
+        """, (nama_lokasi.strip(), id_lokasi))
 
-    conn.commit()
+        if cursor.fetchone():
+            return jsonify({
+                "message": "Nama lokasi sudah terdaftar! Gunakan nama lokasi lain."
+            }), 400
 
-    if cursor.rowcount == 0:
+        # Cek apakah titik koordinat (Latitude & Longitude) sudah pernah ada
+        cursor.execute("""
+            SELECT id_lokasi FROM lokasi_seminar 
+            WHERE ROUND(latitude, 6) = ROUND(%s, 6) 
+              AND ROUND(longitude, 6) = ROUND(%s, 6)
+              AND id_lokasi != %s
+        """, (lat_float, lng_float, id_lokasi))
+
+        if cursor.fetchone():
+            return jsonify({
+                "message": "Titik lokasi (latitude & longitude) tersebut sudah digunakan oleh lokasi lain!"
+            }), 400
+        
+        # Simpan data jika tidak ada data duplikat
+        cursor.execute("""
+            UPDATE lokasi_seminar
+            SET
+                nama_lokasi = %s,
+                latitude = %s,
+                longitude = %s,
+                radius = %s
+            WHERE id_lokasi = %s
+        """, (
+            nama_lokasi.strip(),
+            latitude,
+            longitude,
+            radius,
+            id_lokasi
+        ))
+
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            return jsonify({"message": "Lokasi tidak ditemukan"}), 404
+
+        return jsonify({"message": "Lokasi berhasil diperbarui"}), 200
+
+    except Exception as e:
+        conn.rollback()
+        print(f"Error Database: {e}")
+        return jsonify({"message": "Terjadi kesalahan internal pada database."}), 500
+
+    finally:
         cursor.close()
         conn.close()
-
-        return jsonify({
-            "message": "Lokasi tidak ditemukan"
-        }), 404
-
-    cursor.close()
-    conn.close()
-
-    return jsonify({
-        "message": "Lokasi berhasil diperbarui"
-    })
 
 #Menampilkan data lokasi seminar, fitur search dan fitur sort di halaman Kelola Data Lokasi - Admin
 @app.route("/lokasi-seminar", methods=["GET"])
