@@ -1295,7 +1295,7 @@ def daftar_hadir(id_seminar):
 
         item["jarak"] = round(jarak)
 
-        if jarak <= 15:
+        if jarak <= 10:
             item["status_lokasi"] = "dekat"
         else:
             item["status_lokasi"] = "sedang"
