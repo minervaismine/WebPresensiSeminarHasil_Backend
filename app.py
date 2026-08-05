@@ -270,12 +270,29 @@ def detail_riwayat_verifikasi(id_seminar):
             dt_scan = item["waktu_scan"].replace(tzinfo=timezone.utc).astimezone(TIMEZONE_INDO)
             item["waktu_scan"] = dt_scan.isoformat()
 
+        #Menghitung jarak lokasi peserta saat scan
+        jarak = hitung_jarak(
+            float(item["latitude"]),
+            float(item["longitude"]),
+            float(item["lokasi_latitude"]),
+            float(item["lokasi_longitude"])
+        )
+
+        item["jarak"] = round(jarak)
+
+        if jarak <= 10:
+            item["status_lokasi"] = "dekat"
+        else:
+            item["status_lokasi"] = "sedang"
+
         # Format waktu verifikasi
         if item["waktu_verifikasi"]:
             dt_verif = item["waktu_verifikasi"].replace(tzinfo=timezone.utc).astimezone(TIMEZONE_INDO)
             item["waktu_verifikasi"] = dt_verif.isoformat()
         else:
             item["waktu_verifikasi"] = None
+
+        
     
     cursor.close()
     conn.close()
@@ -1053,7 +1070,7 @@ def lihat_daftar_hadir(id_seminar):
 
         item["jarak"] = round(jarak)
 
-        if jarak <= 15:
+        if jarak <= 10:
             item["status_lokasi"] = "dekat"
         else:
             item["status_lokasi"] = "sedang"
