@@ -248,10 +248,18 @@ def detail_riwayat_verifikasi(id_seminar):
             m.nim,
             p.waktu_scan,
             p.status_verifikasi,
-            p.waktu_verifikasi
+            p.waktu_verifikasi,
+            p.latitude,
+            p.longitude,
+            l.latitude AS lokasi_latitude,
+            l.longitude AS lokasi_longitude
         FROM presensi p
         JOIN mahasiswa m
             ON m.id_user = p.id_mahasiswa
+        JOIN seminar s
+            ON p.id_seminar = s.id_seminar
+        JOIN lokasi_seminar l
+            ON s.id_lokasi = l.id_lokasi
         {where_clause}
         ORDER BY {order_clause}
         LIMIT %s OFFSET %s
@@ -291,8 +299,6 @@ def detail_riwayat_verifikasi(id_seminar):
             item["waktu_verifikasi"] = dt_verif.isoformat()
         else:
             item["waktu_verifikasi"] = None
-
-        
     
     cursor.close()
     conn.close()
