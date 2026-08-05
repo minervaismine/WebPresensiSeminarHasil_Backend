@@ -2092,7 +2092,7 @@ def activate_qr():
         return jsonify({"success": False, "message": "QR Code belum dibuat"}), 404
     
     now = datetime.now(timezone.utc)
-    expired = now + timedelta(minutes=10)
+    expired = now + timedelta(minutes=5)
 
     cursor.execute("""
         UPDATE qr_codes
