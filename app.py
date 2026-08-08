@@ -274,9 +274,12 @@ def detail_riwayat_verifikasi(id_seminar):
     for item in data:
         # Format waktu scan
         if item["waktu_scan"]:
-            # Anggap naive datetime sebagai UTC, lalu konversi ke TIMEZONE_INDO
-            dt_scan = item["waktu_scan"].replace(tzinfo=timezone.utc).astimezone(TIMEZONE_INDO)
-            item["waktu_scan"] = dt_scan.isoformat()
+            # 1. Beri tahu Python bahwa waktu dari DB adalah UTC
+            waktu_utc = item["waktu_scan"].replace(tzinfo=timezone.utc)
+            # 2. Ubah ke zona waktu Indonesia (WITA / UTC+8) menggunakan variabel TIMEZONE_INDO
+            waktu_lokal = waktu_utc.astimezone(TIMEZONE_INDO)
+            # 3. Ubah ke format ISO
+            item["waktu_scan"] = waktu_lokal.isoformat()
 
         #Menghitung jarak lokasi peserta saat scan
         jarak = hitung_jarak(
@@ -295,8 +298,12 @@ def detail_riwayat_verifikasi(id_seminar):
 
         # Format waktu verifikasi
         if item["waktu_verifikasi"]:
-            dt_verif = item["waktu_verifikasi"].replace(tzinfo=timezone.utc).astimezone(TIMEZONE_INDO)
-            item["waktu_verifikasi"] = dt_verif.isoformat()
+            # 1. Beri tahu Python bahwa waktu dari DB adalah UTC
+            waktu_utc = item["waktu_verifikasi"].replace(tzinfo=timezone.utc)
+            # 2. Ubah ke zona waktu Indonesia (WITA / UTC+8) menggunakan variabel TIMEZONE_INDO
+            waktu_lokal = waktu_utc.astimezone(TIMEZONE_INDO)
+            # 3. Ubah ke format ISO
+            item["waktu_verifikasi"] = waktu_lokal.isoformat()
         else:
             item["waktu_verifikasi"] = None
     
