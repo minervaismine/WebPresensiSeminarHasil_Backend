@@ -1301,7 +1301,14 @@ def daftar_hadir(id_seminar):
             item["status_lokasi"] = "sedang"
 
         #Format waktu saat peserta scan
-        item["waktu_scan"] = item["waktu_scan"] = item["waktu_scan"].isoformat()
+        if item["waktu_scan"]:
+            # 1. Beri tahu Python bahwa waktu dari DB adalah UTC
+            waktu_utc = item["waktu_scan"].replace(tzinfo=timezone.utc)
+            # 2. Ubah ke zona waktu Indonesia (WITA / UTC+8) menggunakan variabel TIMEZONE_INDO
+            waktu_lokal = waktu_utc.astimezone(TIMEZONE_INDO)
+            # 3. Ubah ke format ISO
+            item["waktu_scan"] = waktu_lokal.isoformat()
+
 
     return jsonify({
         "data": data,
