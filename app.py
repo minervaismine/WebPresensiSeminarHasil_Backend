@@ -20,7 +20,7 @@ app.secret_key = os.getenv("SECRET_KEY")
 
 SECRET_KEY = os.getenv("SECRET_KEY")
 
-CORS(app, supports_credentials=True, origins=["http://localhost:5173", "https://web-presensi-seminar-hasil-nvvz-gp1ve3icx-karina-minerva-romeda.vercel.app"])
+CORS(app, supports_credentials=True, origins=["http://localhost:5173", "https://web-presensi-seminar-hasil-nvvz-gp1ve3icx-karina-minerva-romeda.vercel.app", "https://web-presensi-seminar-hasil.vercel.app"])
 
 try:
     locale.setlocale(locale.LC_TIME, "id_ID.UTF-8")   # Linux/Mac
