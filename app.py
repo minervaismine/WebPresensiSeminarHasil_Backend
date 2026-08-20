@@ -2270,9 +2270,6 @@ def scan_qr():
         
         #Memastikan QR tersebut aktif
         if qr["status_qr"] != "active":
-            cursor.close()
-            conn.close()
-
             print("QR CODE BELUM DIAKTIFKAN")
 
             return jsonify({
@@ -2409,8 +2406,11 @@ def scan_qr():
         }), 500
 
     finally:
-        cursor.close()
-        conn.close()
+        if cursor is not None:
+            cursor.close()
+
+        if conn is not None:
+            conn.close()
  
 #Menghubungkan data di halaman seminar saya (Penyelenggara)
 @app.route("/detail-seminar/<int:id_user>")
